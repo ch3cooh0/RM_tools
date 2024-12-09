@@ -1,0 +1,6 @@
+tkinterdnd2
+Pillow
+requests
+pyperclip
+python-dotenv 
+pyinstaller
