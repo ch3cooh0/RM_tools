@@ -18,3 +18,4 @@ class ImageProcessingUseCase:
         with open(temp_path, 'rb') as f:
             text = self.ocr_service.extract_text(f)
         return image, text 
+    

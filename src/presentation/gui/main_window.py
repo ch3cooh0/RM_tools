@@ -4,7 +4,6 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 from PIL import Image, ImageTk
 import io
 from application.use_cases.image_processing_use_case import ImageProcessingUseCase
-
 class MainWindow:
     def __init__(self, image_processing_use_case: ImageProcessingUseCase):
         self.use_case = image_processing_use_case
