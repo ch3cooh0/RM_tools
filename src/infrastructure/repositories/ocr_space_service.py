@@ -3,6 +3,13 @@ import requests
 import os
 from domain.interfaces.ocr_service import OCRService
 from domain.entity.戦闘結果詳細 import 戦闘結果詳細
+from pathlib import Path
+from dotenv import load_dotenv
+import sys
+
+# 実行ファイルと同じディレクトリの.envを読み込む
+env_path = Path(sys.executable).parent / '.env'
+load_dotenv(env_path)
 
 class OCRSpaceLine:
     def __init__(self):

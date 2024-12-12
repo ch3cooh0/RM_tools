@@ -37,5 +37,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ocr-tool-windows
-        path: dist/ocr-tool.exe
+        path: |
+          dist/ocr-tool.exe
+          .env
         retention-days: 7 

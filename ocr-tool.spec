@@ -2,12 +2,18 @@
 
 block_cipher = None
 
+# tkinterdnd2のパスを取得
+import tkinterdnd2
+tkdnd_path = os.path.join(os.path.dirname(tkinterdnd2.__file__), 'tkdnd')
+
 a = Analysis(
     ['src/main.py'],
     pathex=[],
     binaries=[],
-    datas=[('.env', '.')],  # .envファイルを含める
-    hiddenimports=[],
+    datas=[
+        (tkdnd_path, 'tkinterdnd2/tkdnd'),  # tkdndライブラリを含める
+    ],
+    hiddenimports=['tkinterdnd2'],  # tkinterdnd2を明示的にインポート
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -30,7 +36,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -38,4 +44,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='version.txt',
+    icon='icon.webp'
 ) 
