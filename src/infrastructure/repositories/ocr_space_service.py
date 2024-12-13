@@ -1,4 +1,5 @@
 from io import BufferedReader
+import io
 import requests
 import os
 from domain.interfaces.ocr_service import OCRService
@@ -6,6 +7,7 @@ from domain.entity.戦闘結果詳細 import 戦闘結果詳細
 from pathlib import Path
 from dotenv import load_dotenv
 import sys
+from PIL import Image  # PillowライブラリからImageをインポート
 
 # 実行ファイルと同じディレクトリの.envを読み込む
 env_path = Path(sys.executable).parent / '.env'
@@ -62,6 +64,18 @@ class OCRSpaceRow:
     def sort_lines(self):
         self.lines.sort(key=lambda x: x.base_left)
 
+def print_OCRSpaceRow(row: OCRSpaceRow):
+    text = "(base_min_top)="+f"{row.base_min_top}"
+    print(text)
+    for line in row.lines:
+        print("line:", line.text, line.base_left, line.min_top)
+
+def print_兵種_OCRSpaceLine(txt: str,line: OCRSpaceLine):
+    if line is None:
+        print(txt, "なし")
+    else:
+        print(txt, line.base_left, line.min_top)
+
 def convert(攻撃側戦闘結果詳細: 戦闘結果詳細, 守備側戦闘結果詳細: 戦闘結果詳細) -> str:
     攻撃側 = 攻撃側戦闘結果詳細.参戦数_to_tsv_str() + "\t攻\t\n" + 攻撃側戦闘結果詳細.被害数_to_tsv_str()
     守備側 = 守備側戦闘結果詳細.参戦数_to_tsv_str() + "\t守\t\n" + 守備側戦闘結果詳細.被害数_to_tsv_str()
@@ -75,6 +89,16 @@ class OCRSpaceService(OCRService):
 
     def extract_text(self, image_file: BufferedReader) -> str:
         try:
+            # 画像サイズをチェックし、200K以上の場合は縮小する
+            image = Image.open(image_file)
+            image_file.seek(0)
+            if image_file.tell() > 200 * 1024:
+                image = image.resize((image.width // 2, image.height // 2))
+                buffer = io.BytesIO()
+                image.save(buffer, format="JPEG")
+                buffer.seek(0)
+                image_file = buffer
+
             response = requests.post(
                 self.api_url,
                 files={'file': image_file},
@@ -103,10 +127,10 @@ class OCRSpaceService(OCRService):
         for line in lines:
             ocr_space_line = OCRSpaceLine()
             ocr_space_line.add_text(line.get("LineText", ""))
-            ocr_space_line.add_min_top(line.get("MinTop", 0))
+            ocr_space_line.add_min_top(int(line.get("MinTop", 0)))
             words = line.get("Words", "")
             mean_left = sum(word.get("Left", 0) for word in words) / len(words)
-            ocr_space_line.add_base_left(mean_left)
+            ocr_space_line.add_base_left(int(mean_left))
             ocr_space_result.add_line(ocr_space_line)
         return ocr_space_result
 
@@ -114,7 +138,7 @@ class OCRSpaceService(OCRService):
         # 戦闘結果を行単位にまとめたもの
         group = None
         for line in ocr_space_result.lines:
-            print("lineInfo", line.text, line.min_top, line.base_left)
+            # print("lineInfo", line.text, line.min_top, line.base_left)
             if group is None:
                 group = []
                 row = OCRSpaceRow()
@@ -130,6 +154,9 @@ class OCRSpaceService(OCRService):
                 if not is_added:
                     group.append(OCRSpaceRow())
                     group[-1].add_line(line)
+        print("行ごとの情報")
+        for row in group:
+            print_OCRSpaceRow(row)
         return self.create_戦闘結果詳細(group)
 
     def create_戦闘結果詳細(self, group: list[OCRSpaceRow]) -> tuple[戦闘結果詳細, 戦闘結果詳細]:
@@ -317,6 +344,9 @@ class OCRSpaceService(OCRService):
                 return 0
 
         def create_戦闘結果詳細(group: list[OCRSpaceRow], header_兵士人数: OCRSpaceLine, header_損失人数: OCRSpaceLine) -> 戦闘結果詳細:
+            print("x","y")
+            print("header_兵士人数", header_兵士人数.base_left, header_兵士人数.min_top)
+            print("header_損失人数", header_損失人数.base_left, header_損失人数.min_top)
             result = 戦闘結果詳細()
             T4_歩兵OCRSpaceLine = get_T4_歩兵OCRSpaceLine(group)
             T4_弓兵OCRSpaceLine = get_T4_弓兵OCRSpaceLine(group)
@@ -334,6 +364,22 @@ class OCRSpaceService(OCRService):
             T1_弓兵OCRSpaceLine = get_T1_弓兵OCRSpaceLine(group)
             T1_騎兵OCRSpaceLine = get_T1_騎兵OCRSpaceLine(group)
             T1_攻城OCRSpaceLine = get_T1_攻城OCRSpaceLine(group)
+            print_兵種_OCRSpaceLine("T4_歩兵", T4_歩兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T4_弓兵", T4_弓兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T4_騎兵", T4_騎兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T4_攻城", T4_攻城OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T3_歩兵", T3_歩兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T3_弓兵", T3_弓兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T3_騎兵", T3_騎兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T3_攻城", T3_攻城OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T2_歩兵", T2_歩兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T2_弓兵", T2_弓兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T2_騎兵", T2_騎兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T2_攻城", T2_攻城OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T1_歩兵", T1_歩兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T1_弓兵", T1_弓兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T1_騎兵", T1_騎兵OCRSpaceLine)
+            print_兵種_OCRSpaceLine("T1_攻城", T1_攻城OCRSpaceLine)
 
             def is_同行(line1: OCRSpaceLine, base_min_top: int) -> bool:
                 if line1 is None or base_min_top is None:
